@@ -1,5 +1,9 @@
 ## CHANGELOG
 
+### Version 1.3
+
+- Update packages
+
 ### Version 1.2
 
 - Added changelog
