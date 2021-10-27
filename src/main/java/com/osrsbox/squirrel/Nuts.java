@@ -5,7 +5,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.FileWriter;
-import java.nio.charset.Charset;
 import java.util.Collection;
 import javax.imageio.ImageIO;
 
@@ -13,7 +12,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import net.runelite.cache.*;
 import net.runelite.cache.definitions.*;
-import net.runelite.cache.definitions.exporters.NpcExporter;
 import net.runelite.cache.definitions.loaders.WorldMapLoader;
 import net.runelite.cache.fs.*;
 import net.runelite.cache.region.Region;
@@ -49,6 +47,7 @@ public class Nuts
 		options.addOption("x", "interfaces", false, "Dump interfaces to specific target folder");
 		options.addOption("y", "mapdata", false, "Dump map data to specific target folder");
 		options.addOption("z", "mapimages", false, "Dump map images to specific target folder");
+		options.addOption("w", "config", false, "Dump map images to specific target folder");
 
 		CommandLineParser parser = new DefaultParser();
 		CommandLine cmd;
@@ -218,6 +217,7 @@ public class Nuts
 		}
 		
 		System.out.println("[*] Finished.");
+		System.exit(0);
 	}
 
 	private static Store loadStore(String cache) throws IOException
@@ -369,19 +369,53 @@ public class Nuts
 			fw.write(overlayStr);
 		}
 
-		// Area data
+		// Area data (world map icons, texts)
 
 		AreaManager areaManager = new AreaManager(store);
 		areaManager.load();
 
-		for (AreaDefinition area : areaManager.getAreas()) {
-			File areaFile = new File(dir, "area-" + area.id + ".json");
+		for (AreaDefinition def : areaManager.getAreas()) {
+			File areaFile = new File(dir, "area-" + def.id + ".json");
 			try (FileWriter fw = new FileWriter(areaFile)) {
-				fw.write(underlayStr);
+				fw.write(gson.toJson(def));
 			}
 		}
 
-		// World map data
+		// Region data
+
+		RegionLoader regionLoader = new RegionLoader(store);
+		regionLoader.loadRegions();
+		for (Region def : regionLoader.getRegions()) {
+			String filename = "region-" + def.getRegionID() + "-" + def.getRegionX() + "-" + def.getRegionY() + "-" + def.getBaseX() + "-" + def.getBaseY();
+//			File file = new File(dir, filename + ".json");
+//			try (FileWriter fw = new FileWriter(file)) {
+//				fw.write(gson.toJson(def));
+//			}
+			File fileCsv = new File(dir, filename + ".csv");
+			StringBuilder csv = new StringBuilder("z;x;y;tileheight;tilesetting;overlayid;overlaypath;overlayrotation;underlayid;\n"); // "\r\n";
+
+			for (int z = 0; z < Region.Z; z++) {
+				for (int x = 0; x < Region.X; x++) {
+					for (int y = 0; y < Region.Y; y++) {
+						// TODO: Check if we even have data, skip empty data
+						String csvLine = "" + z + ";" + x + ";" + y + ";" +
+								def.getTileHeight(z, x, y) + ";" +
+								def.getTileSetting(z, x, y) + ";" +
+								def.getOverlayId(z, x, y) + ";" +
+								def.getOverlayPath(z, x, y) + ";" +
+								def.getOverlayRotation(z, x, y) + ";" +
+								def.getUnderlayId(z, x, y) + ";" +
+								"\n"; // "\r\n";
+						csv.append(csvLine);
+					}
+				}
+			}
+			try (FileWriter fw = new FileWriter(fileCsv)) {
+				fw.write(csv.toString());
+			}
+		}
+
+		// World map data (for world map viewer)
 
 		Index index = store.getIndex(IndexType.WORLDMAP);
 		Archive archive = index.getArchive(0); // there is also archive 1/2, but their data format is not this
@@ -394,7 +428,7 @@ public class Nuts
 			WorldMapLoader loader = new WorldMapLoader();
 			WorldMapDefinition def = loader.load(file.getContents(), file.getFileId());
 
-			File areaFile = new File(dir, "worldmap-" + file.getFileId() + ".json");
+			File areaFile = new File(dir, "worldmap-" + file.getFileId() + "-" + def.position.getX() + "-" + def.position.getZ() + "-" + def.safeName + ".json");
 			try (FileWriter fw = new FileWriter(areaFile)) {
 				fw.write(gson.toJson(def));
 			}
