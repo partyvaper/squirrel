@@ -1,5 +1,6 @@
 package com.osrsbox.squirrel;
 
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -14,8 +15,13 @@ import net.runelite.cache.*;
 import net.runelite.cache.definitions.*;
 import net.runelite.cache.definitions.loaders.WorldMapLoader;
 import net.runelite.cache.fs.*;
+import net.runelite.cache.models.JagexColor;
+import net.runelite.cache.region.Location;
 import net.runelite.cache.region.Region;
 import net.runelite.cache.region.RegionLoader;
+import net.runelite.cache.util.XteaKeyManager;
+import net.runelite.http.api.RuneLiteAPI;
+import net.runelite.http.api.xtea.XteaClient;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -26,6 +32,10 @@ import org.apache.commons.cli.HelpFormatter;
 import net.runelite.cache.definitions.loaders.ModelLoader;
 import net.runelite.cache.fs.flat.FlatStorage;
 import net.runelite.cache.models.ObjExporter;
+//import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
 
 public class Nuts
 {
@@ -48,6 +58,18 @@ public class Nuts
 		options.addOption("y", "mapdata", false, "Dump map data to specific target folder");
 		options.addOption("z", "mapimages", false, "Dump map images to specific target folder");
 		options.addOption("w", "config", false, "Dump map images to specific target folder");
+
+		// LoggerFactory
+		Logger root = (Logger)LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
+		root.setLevel(Level.ALL); // ALL ?
+//		Logger logger1 = (Logger) LoggerFactory.getLogger(RegionLoader.class);
+//		Logger logger2 = (Logger) LoggerFactory.getLogger(RuneLiteAPI.class);
+//		Logger logger3 = (Logger) LoggerFactory.getLogger(XteaKeyManager.class);
+//		System.out.println("is debug enabled 1: " + logger1.isDebugEnabled());
+//		System.out.println("is debug enabled 2: " + logger2.isDebugEnabled());
+//		System.out.println("is debug enabled 3: " + logger3.isDebugEnabled());
+
+		XteaClient xteaClient = new XteaClient(RuneLiteAPI.CLIENT);
 
 		CommandLineParser parser = new DefaultParser();
 		CommandLine cmd;
@@ -220,6 +242,20 @@ public class Nuts
 		System.exit(0);
 	}
 
+	public static String HSLToHex(int h, int s, int l) {
+		// System.out.println("HSL: " + h + " " + s + " " + l);
+		int rgb = JagexColor.HSLtoRGB(JagexColor.packHSL(h, s, l), 1.0);
+		int r = ((rgb >> 16) & 0xff); // / 255.0;
+		int g = ((rgb >> 8) & 0xff); //  / 255.0;
+		int b = (rgb & 0xff); // / 255.0;
+		// System.out.println("RGB: " + r + " " + g + " " + b);
+		Color color = new Color(r, g, b);
+		// String hex = String.format("#%02x%02x%02x", r, g, b);
+		String hex = "#"+Integer.toHexString(color.getRGB()).substring(2);
+		// System.out.println("HEX: " + hex);
+		return hex;
+	}
+
 	private static Store loadStore(String cache) throws IOException
 	{
 		Store store = new Store(new File(cache));
@@ -325,48 +361,34 @@ public class Nuts
 		Gson gson = builder.create();
 
 		// Underlays
-
 		UnderlayManager underlayDumper = new UnderlayManager(store);
 		underlayDumper.load();
 		Collection<UnderlayDefinition> underlays = underlayDumper.getUnderlays();
+		File fileUnderlays = new File(dir, "underlays.csv");
+		StringBuilder csvUnderlays = new StringBuilder("id;color\n"); // "\r\n";
 		for (UnderlayDefinition def : underlays) {
-			def.calculateHsl(); // TODO: Collections.unmodifiableCollection wont change anything, already done in OverlayLoader ?
+			String hex = Nuts.HSLToHex(def.getHue(), def.getSaturation(), def.getLightness());
+			String csvLine = def.getId()+";"+hex+"\n"; // "\r\n";
+			csvUnderlays.append(csvLine);
 		}
-
-		String underlayStr = gson.toJson(underlays);
-
-		File underlayFile = new File(dir, "underlays.json");
-		try (FileWriter fw = new FileWriter(underlayFile)) {
-			fw.write(underlayStr);
+		try (FileWriter fw = new FileWriter(fileUnderlays)) {
+			fw.write(csvUnderlays.toString());
 		}
-
-//		for (UnderlayDefinition def : underlays)
-//		{
-//			GsonBuilder builder = new GsonBuilder().setPrettyPrinting();
-//			Gson gson = builder.create();
-//			String underlayStr = gson.toJson(def);
-//
-//			File targ = new File(dir, def.id + ".json");
-//			try (FileWriter fw = new FileWriter(targ))
-//			{
-//				fw.write(underlayStr);
-//			}
-//		}
 
 		// Overlays
-
 		OverlayManager overlayDumper = new OverlayManager(store);
 		overlayDumper.load();
 		Collection<OverlayDefinition> overlays = overlayDumper.getOverlays();
+		File fileOverlays = new File(dir, "overlays.csv");
+		StringBuilder csvOverlays = new StringBuilder("id;color;texture;secondarycolor;hideunderlay\n"); // "\r\n";
 		for (OverlayDefinition def : overlays) {
-			def.calculateHsl(); // TODO: Collections.unmodifiableCollection wont change anything, already done in OverlayLoader ?
+			String hex = Nuts.HSLToHex(def.getHue(), def.getSaturation(), def.getLightness());
+			String secondaryhex = def.getSecondaryRgbColor() > -1 ? Nuts.HSLToHex(def.getOtherHue(), def.getOtherSaturation(), def.getOtherLightness()) : "";
+			String csvLine = def.getId()+";"+hex+";"+def.getTexture()+";"+secondaryhex+";"+def.isHideUnderlay()+"\n"; // "\r\n";
+			csvOverlays.append(csvLine);
 		}
-
-		String overlayStr = gson.toJson(overlays);
-
-		File overlayFile = new File(dir, "overlays.json");
-		try (FileWriter fw = new FileWriter(overlayFile)) {
-			fw.write(overlayStr);
+		try (FileWriter fw = new FileWriter(fileOverlays)) {
+			fw.write(csvOverlays.toString());
 		}
 
 		// Area data (world map icons, texts)
@@ -385,26 +407,26 @@ public class Nuts
 
 		RegionLoader regionLoader = new RegionLoader(store);
 		regionLoader.loadRegions();
-		for (Region def : regionLoader.getRegions()) {
-			String filename = "region-" + def.getRegionID() + "-" + def.getRegionX() + "-" + def.getRegionY() + "-" + def.getBaseX() + "-" + def.getBaseY();
+		for (Region region : regionLoader.getRegions()) {
+			String filename = "region-" + region.getRegionID() + "-" + region.getRegionX() + "-" + region.getRegionY() + "-" + region.getBaseX() + "-" + region.getBaseY();
 //			File file = new File(dir, filename + ".json");
 //			try (FileWriter fw = new FileWriter(file)) {
 //				fw.write(gson.toJson(def));
 //			}
 			File fileCsv = new File(dir, filename + ".csv");
-			StringBuilder csv = new StringBuilder("z;x;y;tileheight;tilesetting;overlayid;overlaypath;overlayrotation;underlayid;\n"); // "\r\n";
+			StringBuilder csv = new StringBuilder("z;x;y;tileheight;tilesetting;overlayid;overlaypath;overlayrotation;underlayid\n"); // "\r\n";
 
 			for (int z = 0; z < Region.Z; z++) {
 				for (int x = 0; x < Region.X; x++) {
 					for (int y = 0; y < Region.Y; y++) {
 						// TODO: Check if we even have data, skip empty data
 						String csvLine = "" + z + ";" + x + ";" + y + ";" +
-								def.getTileHeight(z, x, y) + ";" +
-								def.getTileSetting(z, x, y) + ";" +
-								def.getOverlayId(z, x, y) + ";" +
-								def.getOverlayPath(z, x, y) + ";" +
-								def.getOverlayRotation(z, x, y) + ";" +
-								def.getUnderlayId(z, x, y) + ";" +
+								region.getTileHeight(z, x, y) + ";" +
+								region.getTileSetting(z, x, y) + ";" +
+								region.getOverlayId(z, x, y) + ";" +
+								region.getOverlayPath(z, x, y) + ";" +
+								region.getOverlayRotation(z, x, y) + ";" +
+								region.getUnderlayId(z, x, y) + "" +
 								"\n"; // "\r\n";
 						csv.append(csvLine);
 					}
@@ -412,6 +434,29 @@ public class Nuts
 			}
 			try (FileWriter fw = new FileWriter(fileCsv)) {
 				fw.write(csv.toString());
+			}
+
+			// Region locations (objects)
+//			LocationsDefinition loc = new LocationsDefinition();
+//			loc.setRegionX(region.getRegionX());
+//			loc.setRegionY(region.getRegionY());
+//			region.loadLocations(loc);
+
+			File fileCsvLoc = new File(dir, filename + "-locations.csv");
+			StringBuilder csvLoc = new StringBuilder("id;type;orientation;x;y;z\n"); // "\r\n";
+			for (Location location : region.getLocations()) {
+				// ObjectDefinition object = objectManager.getObject(location.getId());
+				String csvLine = location.getId() + ";" +
+						location.getType() + ";" +
+						location.getOrientation() + ";" +
+						location.getPosition().getX() + ";" +
+						location.getPosition().getY() + ";" +
+						location.getPosition().getZ() + "" +
+						"\n"; // "\r\n";
+				csvLoc.append(csvLine);
+			}
+			try (FileWriter fw = new FileWriter(fileCsvLoc)) {
+				fw.write(csvLoc.toString());
 			}
 		}
 
