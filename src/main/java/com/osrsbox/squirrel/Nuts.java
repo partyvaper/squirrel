@@ -57,7 +57,7 @@ public class Nuts
 		options.addOption("x", "interfaces", false, "Dump interfaces to specific target folder");
 		options.addOption("y", "mapdata", false, "Dump map data to specific target folder");
 		options.addOption("z", "mapimages", false, "Dump map images to specific target folder");
-		options.addOption("w", "config", false, "Dump map images to specific target folder");
+		// options.addOption("a", "all", false, "Dump all");
 
 		// LoggerFactory
 		Logger root = (Logger)LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
@@ -367,8 +367,8 @@ public class Nuts
 		File fileUnderlays = new File(dir, "underlays.csv");
 		StringBuilder csvUnderlays = new StringBuilder("id;color\n"); // "\r\n";
 		for (UnderlayDefinition def : underlays) {
-			String hex = Nuts.HSLToHex(def.getHue(), def.getSaturation(), def.getLightness());
-			String csvLine = def.getId()+";"+hex+"\n"; // "\r\n";
+			// String hex = Nuts.HSLToHex(def.getHue(), def.getSaturation(), def.getLightness());
+			String csvLine = def.getId()+";"+def.getColor()+"\n"; // "\r\n";
 			csvUnderlays.append(csvLine);
 		}
 		try (FileWriter fw = new FileWriter(fileUnderlays)) {
@@ -382,9 +382,9 @@ public class Nuts
 		File fileOverlays = new File(dir, "overlays.csv");
 		StringBuilder csvOverlays = new StringBuilder("id;color;texture;secondarycolor;hideunderlay\n"); // "\r\n";
 		for (OverlayDefinition def : overlays) {
-			String hex = Nuts.HSLToHex(def.getHue(), def.getSaturation(), def.getLightness());
-			String secondaryhex = def.getSecondaryRgbColor() > -1 ? Nuts.HSLToHex(def.getOtherHue(), def.getOtherSaturation(), def.getOtherLightness()) : "";
-			String csvLine = def.getId()+";"+hex+";"+def.getTexture()+";"+secondaryhex+";"+def.isHideUnderlay()+"\n"; // "\r\n";
+			// String hex = Nuts.HSLToHex(def.getHue(), def.getSaturation(), def.getLightness());
+			// String secondaryhex = def.getSecondaryRgbColor() > -1 ? Nuts.HSLToHex(def.getOtherHue(), def.getOtherSaturation(), def.getOtherLightness()) : "";
+			String csvLine = def.getId()+";"+def.getRgbColor()+";"+def.getTexture()+";"+def.getSecondaryRgbColor()+";"+def.isHideUnderlay()+"\n"; // "\r\n";
 			csvOverlays.append(csvLine);
 		}
 		try (FileWriter fw = new FileWriter(fileOverlays)) {
