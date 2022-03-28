@@ -2,10 +2,7 @@ package com.osrsbox.squirrel;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.FileWriter;
+import java.io.*;
 import java.util.Collection;
 import javax.imageio.ImageIO;
 
@@ -19,9 +16,11 @@ import net.runelite.cache.models.JagexColor;
 import net.runelite.cache.region.Location;
 import net.runelite.cache.region.Region;
 import net.runelite.cache.region.RegionLoader;
-import net.runelite.cache.util.XteaKeyManager;
-import net.runelite.http.api.RuneLiteAPI;
-import net.runelite.http.api.xtea.XteaClient;
+// import net.runelite.cache.util.XteaKeyManager;
+// import net.runelite.http.api.RuneLiteAPI;
+// import net.runelite.http.api.xtea.XteaClient;
+// import net.runelite.client.plugins.xtea.XteaClient;
+// import net.runelite.client.plugins.xtea.XteaClient;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -32,10 +31,10 @@ import org.apache.commons.cli.HelpFormatter;
 import net.runelite.cache.definitions.loaders.ModelLoader;
 import net.runelite.cache.fs.flat.FlatStorage;
 import net.runelite.cache.models.ObjExporter;
-//import org.slf4j.Logger;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
+// import ch.qos.logback.classic.Level;
+// import ch.qos.logback.classic.Logger;
 
 public class Nuts
 {
@@ -60,8 +59,9 @@ public class Nuts
 		// options.addOption("a", "all", false, "Dump all");
 
 		// LoggerFactory
-		Logger root = (Logger)LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
-		root.setLevel(Level.ALL); // ALL ?
+		 Logger root = (Logger)LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
+		// root.setLevel(Level.ALL); // ALL ?
+		// root.isDebugEnabled();
 //		Logger logger1 = (Logger) LoggerFactory.getLogger(RegionLoader.class);
 //		Logger logger2 = (Logger) LoggerFactory.getLogger(RuneLiteAPI.class);
 //		Logger logger3 = (Logger) LoggerFactory.getLogger(XteaKeyManager.class);
@@ -69,7 +69,10 @@ public class Nuts
 //		System.out.println("is debug enabled 2: " + logger2.isDebugEnabled());
 //		System.out.println("is debug enabled 3: " + logger3.isDebugEnabled());
 
-		XteaClient xteaClient = new XteaClient(RuneLiteAPI.CLIENT);
+	 	// XteaClient xteaClient = new XteaClient(RuneLiteAPI.CLIENT);
+//		InputStream in = Nuts.class.getResourceAsStream("/xteas.json");
+//		XteaKeyManager keyManager = new XteaKeyManager();
+//		keyManager.loadKeys(in);
 
 		CommandLineParser parser = new DefaultParser();
 		CommandLine cmd;
@@ -407,6 +410,10 @@ public class Nuts
 
 		RegionLoader regionLoader = new RegionLoader(store);
 		regionLoader.loadRegions();
+//		Field f = RegionLoader.class.getDeclaredField("keyManager");
+//		f.setAccessible(true);
+//		XteaKeyManager keyManager = f.get(regionLoader);
+//		keyManager.loadKeys(in);
 		for (Region region : regionLoader.getRegions()) {
 			String filename = "region-" + region.getRegionID() + "-" + region.getRegionX() + "-" + region.getRegionY() + "-" + region.getBaseX() + "-" + region.getBaseY();
 //			File file = new File(dir, filename + ".json");
